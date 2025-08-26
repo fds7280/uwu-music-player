@@ -18,7 +18,7 @@ A feature-rich terminal-based music player with YouTube streaming support. [work
 
 ## Building
 ```bash
-mkdir build
-cd build
-cmake ..
-make
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
