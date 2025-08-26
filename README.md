@@ -1,6 +1,6 @@
 # UwU Terminal Music Player
 
-A feature-rich terminal-based music player with YouTube streaming support. [work in progress]
+A feature-rich terminal-based music player with streaming support, Using yt-dlp [work in progress]
 
 ## Features
 - Local MP3 playback
