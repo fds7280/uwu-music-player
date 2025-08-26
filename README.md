@@ -1,4 +1,4 @@
-# Terminal Music Player
+# UwU Terminal Music Player
 
 A feature-rich terminal-based music player with YouTube streaming support. [work in progress]
 
