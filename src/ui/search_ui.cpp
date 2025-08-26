@@ -1,6 +1,7 @@
 #include "ui/search_ui.h"
 #include "../utils/utils.h"
 #include "../audio/audio_player.h"
+#include "../streaming/youtube_stream.h"
 #include <ncurses.h>
 #include <filesystem>
 #include <thread>
@@ -90,6 +91,9 @@ namespace UI {
             std::string cached_file_path = Streaming::getCachedFilePath(selection.id, cache_dir);
             
             if (fs::exists(cached_file_path)) {
+                // CLEAN UP OTHER CACHED FILES - ADD THIS LINE
+                Streaming::cleanupCache(cache_dir, selection.id);
+                
                 // Stop any existing playback
                 if (Audio::is_playing) {
                     Audio::StopAudio();

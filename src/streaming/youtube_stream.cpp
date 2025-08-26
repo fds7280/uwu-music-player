@@ -1,4 +1,4 @@
-#include "streaming/youtube_stream.h" 
+#include "streaming/youtube_stream.h"
 #include "../utils/utils.h"
 #include "../audio/audio_player.h"
 #include <sstream>
@@ -12,6 +12,23 @@
 namespace fs = std::filesystem;
 
 namespace Streaming {
+    void cleanupCache(const std::string& cache_dir, const std::string& current_video_id) {
+        try {
+            for (const auto& entry : fs::directory_iterator(cache_dir)) {
+                if (entry.is_regular_file()) {
+                    std::string filename = entry.path().filename().string();
+                    
+                    // Keep only the current song, delete everything else
+                    if (filename != (current_video_id + ".mp3")) {
+                        fs::remove(entry.path());
+                    }
+                }
+            }
+        } catch (const fs::filesystem_error& e) {
+            // Ignore filesystem errors during cleanup
+        }
+    }
+
     std::vector<SearchResult> searchYouTube(const std::string& query) {
         std::vector<SearchResult> results;
         if (query.empty()) return results;
@@ -77,6 +94,9 @@ namespace Streaming {
         if (Audio::is_playing) {
             Audio::StopAudio();
         }
+        
+        // Clean up old cached songs, keep only current one
+        cleanupCache(cache_dir, video_id);
         
         system("pkill -f yt-dlp");
         system("pkill -f ffmpeg");

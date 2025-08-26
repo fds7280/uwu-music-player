@@ -19,6 +19,11 @@ namespace Streaming {
     // Cache management
     bool isCached(const std::string& video_id, const std::string& cache_dir);
     std::string getCachedFilePath(const std::string& video_id, const std::string& cache_dir);
+ 
+    //Cache cleanup function
+    void cleanupCache(const std::string& cache_dir, const std::string& current_video_id);
+
+
 }
 
 #endif // YOUTUBE_STREAM_H
