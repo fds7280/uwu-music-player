@@ -1,6 +1,6 @@
 # Terminal Music Player
 
-A feature-rich terminal-based music player with YouTube streaming support.
+A feature-rich terminal-based music player with YouTube streaming support. [work in progress]
 
 ## Features
 - Local MP3 playback
