@@ -6,8 +6,6 @@ A feature-rich terminal-based music player with YouTube streaming support. [work
 - Local MP3 playback
 - YouTube search and streaming
 - ASCII art album covers
-- Progressive caching of streamed content
-- Metadata display
 - Keyboard controls
 
 ## Dependencies
