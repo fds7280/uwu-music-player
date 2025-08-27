@@ -25,6 +25,7 @@ set(SOURCES
     src/ui/file_browser.cpp
     src/ui/playback_ui.cpp
     src/ui/search_ui.cpp
+    src/playlist/playlist_manager.cpp
 )
 
 # Create executable

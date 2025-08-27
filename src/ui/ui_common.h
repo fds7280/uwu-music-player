@@ -16,7 +16,8 @@ namespace UI {
     // Mode selection
     enum Mode {
         OFFLINE_MODE = 0,
-        ONLINE_MODE = 1
+        ONLINE_MODE = 1,
+        PLAYLIST_MODE = 2
     };
     
     Mode promptModeSelection();

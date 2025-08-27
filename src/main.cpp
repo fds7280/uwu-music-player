@@ -5,7 +5,6 @@
 #include "audio/audio_player.h"
 #include "utils/utils.h"
 
-
 int main() {
     UI::init();
     
@@ -19,8 +18,10 @@ int main() {
         if (!music_dir.empty()) {
             UI::runPlaybackTUI(music_dir);
         }
-    } else {
+    } else if (mode == UI::ONLINE_MODE) {
         UI::runOnlineMode();
+    } else if (mode == UI::PLAYLIST_MODE) {
+        UI::runPlaylistMode();
     }
     
     UI::cleanup();

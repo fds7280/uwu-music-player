@@ -41,26 +41,48 @@ namespace UI {
     
     Mode promptModeSelection() {
         int highlight = 0;
-        const char* choices[] = {"Offline Library", "Online (YouTube)"};
+        const char* choices[] = {
+            "Offline Library", 
+            "Online (YouTube)", 
+            "Playlist Mode"
+        };
+        const int num_choices = 3;
         
         while(true) {
             clear();
-            mvprintw(LINES / 2 - 2, (COLS - 20) / 2, "Select a mode:");
-            for(int i = 0; i < 2; ++i) {
+            
+            // Title
+            mvprintw(LINES / 2 - 3, (COLS - 20) / 2, "=== UWU MUSIC PLAYER ===");
+            mvprintw(LINES / 2 - 1, (COLS - 15) / 2, "Select a mode:");
+            
+            // Menu options
+            for(int i = 0; i < num_choices; ++i) {
                 if (i == highlight) attron(A_REVERSE);
-                mvprintw(LINES / 2 + i, (COLS - strlen(choices[i])) / 2, "%s", choices[i]);
+                mvprintw(LINES / 2 + i + 1, (COLS - strlen(choices[i])) / 2, "%s", choices[i]);
                 if (i == highlight) attroff(A_REVERSE);
             }
+            
+            // Instructions
+            mvprintw(LINES / 2 + num_choices + 3, (COLS - 35) / 2, "Use UP/DOWN arrows and ENTER to select");
+            
             refresh();
 
             int ch = getch();
             switch(ch) {
                 case KEY_UP:
+                    highlight = (highlight > 0) ? highlight - 1 : num_choices - 1;
+                    break;
                 case KEY_DOWN:
-                    highlight = !highlight;
+                    highlight = (highlight < num_choices - 1) ? highlight + 1 : 0;
                     break;
                 case 10: // Enter
                     return static_cast<Mode>(highlight);
+                case '1':
+                    return OFFLINE_MODE;
+                case '2':
+                    return ONLINE_MODE;
+                case '3':
+                    return PLAYLIST_MODE;
             }
         }
     }
