@@ -64,19 +64,22 @@ namespace UI {
     }
     
     void drawProgressBar(int y, int x, int width, int current_seconds, int total_seconds) {
-        if (total_seconds <= 0) total_seconds = 300; // Default 5 minutes if unknown
+        // If total is unknown, try to estimate or use a reasonable default
+        if (total_seconds <= 0) {
+            total_seconds = 180; // Default 3 minutes
+        }
         
         float progress = (float)current_seconds / total_seconds;
+        if (progress > 1.0f) progress = 1.0f; // Cap at 100%
+        
         int filled = (int)(progress * (width - 2));
         
         mvprintw(y, x, "[");
         for (int i = 0; i < width - 2; i++) {
             if (i < filled) {
-                attron(A_REVERSE);
-                mvprintw(y, x + 1 + i, " ");
-                attroff(A_REVERSE);
+                mvprintw(y, x + 1 + i, "█");
             } else {
-                mvprintw(y, x + 1 + i, "-");
+                mvprintw(y, x + 1 + i, "░");
             }
         }
         mvprintw(y, x + width - 1, "]");
@@ -110,6 +113,42 @@ namespace UI {
         [[maybe_unused]] int ret3 = system(dl_command.c_str());
         std::this_thread::sleep_for(std::chrono::seconds(2));
 
+        // Get video duration using yt-dlp
+        int total_duration = 180; // Default 3 minutes
+        std::string duration_cmd = "yt-dlp --get-duration \"https://youtube.com/watch?v=" + video.id + "\" 2>/dev/null";
+        FILE* pipe = popen(duration_cmd.c_str(), "r");
+        if (pipe) {
+            char buffer[32];
+            if (fgets(buffer, sizeof(buffer), pipe)) {
+                std::string duration_str(buffer);
+                duration_str.erase(duration_str.find_last_not_of(" \n\r\t") + 1);
+                
+                // Parse duration (format: MM:SS or HH:MM:SS)
+                std::vector<int> parts;
+                std::string current = "";
+                for (char c : duration_str) {
+                    if (c == ':') {
+                        if (!current.empty()) {
+                            parts.push_back(std::stoi(current));
+                            current = "";
+                        }
+                    } else if (isdigit(c)) {
+                        current += c;
+                    }
+                }
+                if (!current.empty()) {
+                    parts.push_back(std::stoi(current));
+                }
+                
+                if (parts.size() == 2) { // MM:SS
+                    total_duration = parts[0] * 60 + parts[1];
+                } else if (parts.size() == 3) { // HH:MM:SS
+                    total_duration = parts[0] * 3600 + parts[1] * 60 + parts[2];
+                }
+            }
+            pclose(pipe);
+        }
+
         // Play from FIFO
         Audio::is_playing = true;
         Audio::is_paused = false;
@@ -118,15 +157,38 @@ namespace UI {
         // Get ASCII art once
         std::vector<std::string> asciiArt = AsciiArt::getYouTubeThumbnailASCII(video.id);
         
+        // Track playback time manually since Audio::GetCurrentTimeSeconds() might not work
+        auto start_time = std::chrono::steady_clock::now();
+        int paused_time = 0;
+        auto pause_start = std::chrono::steady_clock::now();
+        
         // Display UI while playing
         nodelay(stdscr, TRUE);
         int last_time = -1;
+        bool was_paused = false;
         
         while(Audio::is_playing) {
-            int current_time = Audio::GetCurrentTimeSeconds();
+            // Calculate current time
+            int current_time;
+            if (Audio::is_paused) {
+                current_time = last_time;
+                if (!was_paused) {
+                    pause_start = std::chrono::steady_clock::now();
+                    was_paused = true;
+                }
+            } else {
+                if (was_paused) {
+                    auto now = std::chrono::steady_clock::now();
+                    paused_time += std::chrono::duration_cast<std::chrono::seconds>(now - pause_start).count();
+                    was_paused = false;
+                }
+                auto now = std::chrono::steady_clock::now();
+                auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
+                current_time = elapsed - paused_time;
+            }
             
-            // Only refresh if time changed
-            if (current_time != last_time) {
+            // Only refresh if time changed or pause state changed
+            if (current_time != last_time || was_paused != Audio::is_paused) {
                 clear();
                 int max_y, max_x;
                 getmaxyx(stdscr, max_y, max_x);
@@ -137,7 +199,7 @@ namespace UI {
                 
                 // Draw vertical separator
                 for (int y = 0; y < max_y; y++) {
-                    mvprintw(y, art_panel_width, "|");
+                    mvprintw(y, art_panel_width, "│");
                 }
                 
                 // Left panel - ASCII art takes full space
@@ -151,7 +213,7 @@ namespace UI {
                 }
                 
                 // Progress bar below the art
-                drawProgressBar(max_y - 3, 2, art_panel_width - 4, current_time, 300);
+                drawProgressBar(max_y - 3, 2, art_panel_width - 4, current_time, total_duration);
                 
                 // Right panel - Song info
                 int info_x = art_panel_width + 2;
@@ -179,7 +241,9 @@ namespace UI {
                 mvprintw(max_y - 2, info_x, Audio::is_paused ? "⏸ PAUSED" : "▶ PLAYING");
                 
                 refresh();
-                last_time = current_time;
+                if (!Audio::is_paused) {
+                    last_time = current_time;
+                }
             }
             
             int ch = getch();
@@ -187,7 +251,6 @@ namespace UI {
                 Audio::is_playing = false;
             } else if (ch == ' ') {
                 Audio::is_paused = !Audio::is_paused;
-                last_time = -1; // Force refresh
             }
             
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -345,7 +408,7 @@ namespace UI {
         }
     }
     
-        void viewPlaylist(const Playlist::PlaylistInfo& playlist) {
+    void viewPlaylist(const Playlist::PlaylistInfo& playlist) {
         int highlight = 0;
         int scroll_offset = 0;
         
@@ -471,4 +534,4 @@ namespace UI {
         mvprintw(2, 0, "Press any key to continue...");
         getch();
     }
-} 
+}
