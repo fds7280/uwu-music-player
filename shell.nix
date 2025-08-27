@@ -13,8 +13,9 @@ pkgs.mkShell {
     pipewire
     libsndfile
     taglib
-    zlib          # Added this line
-    
+    zlib 
+    imagemagick
+
     # Runtime dependencies
     yt-dlp
     ffmpeg

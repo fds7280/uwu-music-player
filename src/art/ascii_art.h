@@ -14,6 +14,9 @@ namespace AsciiArt {
     
     // Extract album art from MP3 file and convert to ASCII
     std::vector<std::string> extractAlbumArtASCII(const std::string& filePath);
+    
+    // Get YouTube thumbnail and convert to ASCII
+    std::vector<std::string> getYouTubeThumbnailASCII(const std::string& video_id);
 }
 
 #endif // ASCII_ART_H
