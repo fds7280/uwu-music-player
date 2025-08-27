@@ -183,11 +183,10 @@ std::vector<std::string> getYouTubeThumbnailASCII(const std::string& video_id) {
     }
     
     // Convert JPEG to raw RGB data using ImageMagick
-    std::string convert_cmd = "convert \"" + temp_jpg + "\" -resize " + 
-                              std::to_string(THUMBNAIL_WIDTH) + "x" + 
-                              std::to_string(THUMBNAIL_HEIGHT) + "! " +
-                              "-depth 8 rgb:\"" + temp_raw + "\"";
-    
+    std::string convert_cmd = "magick convert \"" + temp_jpg + "\" -resize " + 
+                          std::to_string(THUMBNAIL_WIDTH) + "x" + 
+                          std::to_string(THUMBNAIL_HEIGHT) + "! " +
+                          "-depth 8 rgb:\"" + temp_raw + "\" 2>/dev/null";   
     if (system(convert_cmd.c_str()) != 0) {
         std::filesystem::remove(temp_jpg);
         return generateASCIIArt(nullptr, 0);
