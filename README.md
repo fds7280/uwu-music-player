@@ -14,6 +14,7 @@ A feature-rich terminal-based music player with streaming support, Using yt-dlp 
 - libsndfile
 - TagLib
 - yt-dlp
+- ImageMagick 
 - ffmpeg
 
 ## Building
