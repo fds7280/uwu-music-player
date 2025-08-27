@@ -63,6 +63,30 @@ namespace UI {
         return results[choice];
     }
     
+    void drawProgressBar(int y, int x, int width, int current_seconds, int total_seconds) {
+        if (total_seconds <= 0) total_seconds = 300; // Default 5 minutes if unknown
+        
+        float progress = (float)current_seconds / total_seconds;
+        int filled = (int)(progress * (width - 2));
+        
+        mvprintw(y, x, "[");
+        for (int i = 0; i < width - 2; i++) {
+            if (i < filled) {
+                attron(A_REVERSE);
+                mvprintw(y, x + 1 + i, " ");
+                attroff(A_REVERSE);
+            } else {
+                mvprintw(y, x + 1 + i, "-");
+            }
+        }
+        mvprintw(y, x + width - 1, "]");
+        
+        // Time display
+        mvprintw(y + 1, x, "%02d:%02d / %02d:%02d", 
+                 current_seconds / 60, current_seconds % 60,
+                 total_seconds / 60, total_seconds % 60);
+    }
+    
     void playYouTubeVideo(const Streaming::SearchResult& video) {
         const std::string cache_dir = Utils::getCacheDirectory();
         
@@ -91,41 +115,84 @@ namespace UI {
         Audio::is_paused = false;
         std::thread play_thread([fifo_path]() { Audio::PlayAudio(fifo_path); });
 
+        // Get ASCII art once
+        std::vector<std::string> asciiArt = AsciiArt::getYouTubeThumbnailASCII(video.id);
+        
         // Display UI while playing
         nodelay(stdscr, TRUE);
+        int last_time = -1;
+        
         while(Audio::is_playing) {
-            clear();
-            int max_y, max_x;
-            getmaxyx(stdscr, max_y, max_x);
-            mvprintw(0, 0, "Now Streaming: %s", video.title.c_str());
-            mvprintw(2, 0, "Press 'q' to stop, SPACE to pause/resume.");
+            int current_time = Audio::GetCurrentTimeSeconds();
             
-            WINDOW *info_win = newwin(max_y, max_x / 2, 0, max_x / 2);
-            box(info_win, 0, 0);
-            mvwprintw(info_win, 1, 1, "YouTube Stream");
-            mvwprintw(info_win, 2, 1, "Title: %.30s", video.title.c_str());
-            
-            std::vector<std::string> asciiArt = AsciiArt::getYouTubeThumbnailASCII(video.id);
-            int art_start_y = 4;
-            for (size_t i = 0; i < asciiArt.size(); ++i) {
-                mvwprintw(info_win, art_start_y + i, 1, "%s", asciiArt[i].c_str());
+            // Only refresh if time changed
+            if (current_time != last_time) {
+                clear();
+                int max_y, max_x;
+                getmaxyx(stdscr, max_y, max_x);
+                
+                // Calculate layout
+                int info_panel_width = max_x / 6;  // 15% for song info
+                int art_panel_width = max_x - info_panel_width - 1;
+                
+                // Draw vertical separator
+                for (int y = 0; y < max_y; y++) {
+                    mvprintw(y, art_panel_width, "|");
+                }
+                
+                // Left panel - ASCII art takes full space
+                int art_y = 0;
+                for (size_t i = 0; i < asciiArt.size() && art_y < max_y - 4; i++) {
+                    std::string line = asciiArt[i];
+                    if (line.length() > art_panel_width - 1) {
+                        line = line.substr(0, art_panel_width - 1);
+                    }
+                    mvprintw(art_y++, 0, "%s", line.c_str());
+                }
+                
+                // Progress bar below the art
+                drawProgressBar(max_y - 3, 2, art_panel_width - 4, current_time, 300);
+                
+                // Right panel - Song info
+                int info_x = art_panel_width + 2;
+                int info_width = info_panel_width - 3;
+                
+                mvprintw(1, info_x, "NOW PLAYING");
+                mvprintw(2, info_x, "━━━━━━━━━━━");
+                
+                // Wrap title if needed
+                std::string title = video.title;
+                int title_y = 4;
+                while (!title.empty() && title_y < max_y - 10) {
+                    std::string line = title.substr(0, info_width);
+                    mvprintw(title_y++, info_x, "%s", line.c_str());
+                    title = title.length() > info_width ? title.substr(info_width) : "";
+                }
+                
+                // Controls
+                mvprintw(max_y - 8, info_x, "CONTROLS");
+                mvprintw(max_y - 7, info_x, "━━━━━━━━");
+                mvprintw(max_y - 5, info_x, "[SPACE] %s", Audio::is_paused ? "Resume" : "Pause");
+                mvprintw(max_y - 4, info_x, "[Q] Stop");
+                
+                // Status
+                mvprintw(max_y - 2, info_x, Audio::is_paused ? "⏸ PAUSED" : "▶ PLAYING");
+                
+                refresh();
+                last_time = current_time;
             }
             
-            int current_seconds = Audio::GetCurrentTimeSeconds();
-            mvwprintw(info_win, art_start_y + AsciiArt::THUMBNAIL_HEIGHT + 1, 1, "Time: %02d:%02d", current_seconds / 60, current_seconds % 60);
-            if (fs::exists(final_file)) mvwprintw(info_win, max_y - 3, 1, "Cached: %zu KB", fs::file_size(final_file) / 1024);
-            mvwprintw(info_win, max_y - 2, 1, Audio::is_paused ? "PAUSED" : "PLAYING");
-            
-            refresh();
-            wrefresh(info_win);
-            delwin(info_win);
-            
             int ch = getch();
-            if (ch == 'q') Audio::is_playing = false;
-            else if (ch == ' ') Audio::is_paused = !Audio::is_paused;
+            if (ch == 'q' || ch == 'Q') {
+                Audio::is_playing = false;
+            } else if (ch == ' ') {
+                Audio::is_paused = !Audio::is_paused;
+                last_time = -1; // Force refresh
+            }
             
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
+        
         nodelay(stdscr, FALSE);
         [[maybe_unused]] int ret4 = system("pkill -f yt-dlp");
         [[maybe_unused]] int ret5 = system("pkill -f ffmpeg");
@@ -230,19 +297,19 @@ namespace UI {
             mvprintw(0, 0, "=== SAVED PLAYLISTS ===");
             mvprintw(1, 0, "Select playlist (Enter to open, 'd' to delete, 'q' to go back):");
             
-             for (size_t i = 0; i < playlists.size(); i++) {
-    if (i == highlight) attron(A_REVERSE);
-    
-    // Remove .playlist extension for display
-    std::string display_name = playlists[i];
-    if (display_name.length() >= 9 && display_name.substr(display_name.length() - 9) == ".playlist") {
-        display_name = display_name.substr(0, display_name.length() - 9);
-    }
-    
-      mvprintw(i + 3, 2, "%s", display_name.c_str());
-    
-      if (i == highlight) attroff(A_REVERSE);
-        }           
+            for (size_t i = 0; i < playlists.size(); i++) {
+                if (i == highlight) attron(A_REVERSE);
+                
+                // Remove .playlist extension for display
+                std::string display_name = playlists[i];
+                if (display_name.length() >= 9 && display_name.substr(display_name.length() - 9) == ".playlist") {
+                    display_name = display_name.substr(0, display_name.length() - 9);
+                }
+                
+                mvprintw(i + 3, 2, "%s", display_name.c_str());
+                
+                if (i == highlight) attroff(A_REVERSE);
+            }           
             refresh();
             
             int ch = getch();
@@ -278,7 +345,7 @@ namespace UI {
         }
     }
     
-    void viewPlaylist(const Playlist::PlaylistInfo& playlist) {
+        void viewPlaylist(const Playlist::PlaylistInfo& playlist) {
         int highlight = 0;
         int scroll_offset = 0;
         
@@ -308,7 +375,7 @@ namespace UI {
                 
                 if (song_idx == highlight) attron(A_REVERSE);
                 
-                               // Format: "  1. Title - Artist [duration]"
+                // Format: "  1. Title - Artist [duration]"
                 std::string display = std::to_string(song_idx + 1) + ". ";
                 display += song.title.substr(0, 40);
                 if (song.title.length() > 40) display += "...";
@@ -371,50 +438,30 @@ namespace UI {
             result.id = song.id;
             result.title = song.title + " - " + song.artist;
             
-            // Start playback in a separate thread
-            std::thread playback_thread([result]() {
-                playYouTubeVideo(result);
-            });
+            // Use the updated playYouTubeVideo function
+            playYouTubeVideo(result);
             
-            // Wait for user input or song to finish
+            // Check if user wants to navigate
+            clear();
+            mvprintw(0, 0, "Song finished. What next?");
+            mvprintw(1, 0, "'n' = Next, 'p' = Previous, 'q' = Quit, any other key = Continue");
+            
             nodelay(stdscr, TRUE);
-            bool skip = false;
-            bool go_back = false;
-            
-            while (Audio::is_playing && !skip && !go_back) {
-                int ch = getch();
-                switch(ch) {
-                    case 'n': // Next
-                        skip = true;
-                        Audio::is_playing = false;
-                        break;
-                    case 'p': // Previous
-                        if (i > 0) {
-                            go_back = true;
-                            Audio::is_playing = false;
-                        }
-                        break;
-                    case 'q': // Quit playlist
-                        Audio::is_playing = false;
-                        nodelay(stdscr, FALSE);
-                        if (playback_thread.joinable()) playback_thread.join();
-                        return;
-                }
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-            
+            int ch = getch();
             nodelay(stdscr, FALSE);
             
-            // Stop current playback
-            Audio::is_playing = false;
-            [[maybe_unused]] int ret1 = system("pkill -f yt-dlp");
-            [[maybe_unused]] int ret2 = system("pkill -f ffmpeg");
-            
-            if (playback_thread.joinable()) playback_thread.join();
-            
-            // Handle navigation
-            if (go_back && i > 0) {
-                i -= 2; // Will be incremented by loop, so we go back 2 to play previous
+            switch(ch) {
+                case 'n': // Next (continue normally)
+                    break;
+                case 'p': // Previous
+                    if (i > 0) {
+                        i -= 2; // Will be incremented by loop, so go back 2
+                    }
+                    break;
+                case 'q': // Quit playlist
+                    return;
+                default: // Continue
+                    break;
             }
         }
         
@@ -424,4 +471,4 @@ namespace UI {
         mvprintw(2, 0, "Press any key to continue...");
         getch();
     }
-}
+} 
