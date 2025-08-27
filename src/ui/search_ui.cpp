@@ -77,9 +77,11 @@ namespace UI {
         mvprintw(y, x, "[");
         for (int i = 0; i < width - 2; i++) {
             if (i < filled) {
-                mvprintw(y, x + 1 + i, "█");
+                attron(A_REVERSE);
+                mvprintw(y, x + 1 + i, " ");  // Use reverse space for solid blocks
+                attroff(A_REVERSE);
             } else {
-                mvprintw(y, x + 1 + i, "░");
+                mvprintw(y, x + 1 + i, " ");  // Empty space
             }
         }
         mvprintw(y, x + width - 1, "]");
@@ -199,7 +201,7 @@ namespace UI {
                 
                 // Draw vertical separator
                 for (int y = 0; y < max_y; y++) {
-                    mvprintw(y, art_panel_width, "│");
+                    mvprintw(y, art_panel_width, "|");
                 }
                 
                 // Left panel - ASCII art takes full space
