@@ -1,11 +1,49 @@
 #include "ui/ui_common.h"
 #include <cstring>
+#include <vector>
 
 namespace UI {
     void init() {
         initscr();
-        start_color();
-        init_pair(1, COLOR_YELLOW, COLOR_BLACK);
+        start_color();  // Enable color support
+        
+        // Check if terminal supports colors
+        if (!has_colors()) {
+            endwin();
+            printf("Your terminal does not support colors\n");
+            exit(1);
+        }
+        
+        // Initialize color pairs for UI elements
+        init_pair(1, COLOR_CYAN, COLOR_BLACK);     // Cyan text
+        init_pair(2, COLOR_YELLOW, COLOR_BLACK);   // Yellow text  
+        init_pair(3, COLOR_GREEN, COLOR_BLACK);    // Green text
+        init_pair(4, COLOR_RED, COLOR_BLACK);      // Red text
+        init_pair(5, COLOR_MAGENTA, COLOR_BLACK);  // Magenta text
+        init_pair(6, COLOR_BLUE, COLOR_BLACK);     // Blue text
+        init_pair(7, COLOR_WHITE, COLOR_BLACK);    // White text
+        init_pair(8, COLOR_BLACK, COLOR_WHITE);    // Inverted for selection
+        
+        // Progress bar colors
+        init_pair(10, COLOR_WHITE, COLOR_GREEN);   // Progress filled
+        init_pair(11, COLOR_WHITE, COLOR_RED);     // Progress empty
+        init_pair(12, COLOR_BLACK, COLOR_YELLOW);  // Progress text
+        
+        // Thumbnail colors (for different brightness levels)
+        init_pair(20, COLOR_BLACK, COLOR_BLACK);   // Very dark
+        init_pair(21, COLOR_BLUE, COLOR_BLACK);    // Dark
+        init_pair(22, COLOR_CYAN, COLOR_BLACK);    // Medium-dark
+        init_pair(23, COLOR_GREEN, COLOR_BLACK);   // Medium
+        init_pair(24, COLOR_YELLOW, COLOR_BLACK);  // Medium-bright
+        init_pair(25, COLOR_RED, COLOR_BLACK);     // Bright
+        init_pair(26, COLOR_MAGENTA, COLOR_BLACK); // Very bright
+        init_pair(27, COLOR_WHITE, COLOR_BLACK);   // Brightest
+        
+        // Special UI colors
+        init_pair(30, COLOR_CYAN, COLOR_BLUE);     // Header background
+        init_pair(31, COLOR_YELLOW, COLOR_RED);    // Warning/Alert
+        init_pair(32, COLOR_GREEN, COLOR_GREEN);   // Success background
+        
         noecho();
         cbreak();
         keypad(stdscr, TRUE);
@@ -17,6 +55,9 @@ namespace UI {
     }
     
     void drawBox(WINDOW* win, int y, int x, int height, int width) {
+        // Draw colored box
+        wattron(win, COLOR_PAIR(1)); // Cyan color for box
+        
         mvwaddch(win, y, x, ACS_ULCORNER);
         mvwaddch(win, y, x + width - 1, ACS_URCORNER);
         mvwaddch(win, y + height - 1, x, ACS_LLCORNER);
@@ -31,6 +72,8 @@ namespace UI {
             mvwaddch(win, y + i, x, ACS_VLINE);
             mvwaddch(win, y + i, x + width - 1, ACS_VLINE);
         }
+        
+        wattroff(win, COLOR_PAIR(1));
     }
     
     void centerText(WINDOW* win, int y, const std::string& text) {
@@ -39,31 +82,139 @@ namespace UI {
         mvwprintw(win, y, x, "%s", text.c_str());
     }
     
+    void showStartupScreen() {
+        clear();
+        
+        // Anime girl ASCII art using only . and : with colors
+        std::vector<std::pair<std::string, int>> anime_art = {
+            {"                    ........::::........                    ", 5},
+            {"                 ..:::::::::::::::::::::..                 ", 5},
+            {"               .:::....:::::::::::....:::.                 ", 5},
+            {"              ::::..    .::::::::.    ..:::                ", 5},
+            {"             ::::.        ::::::.        .:::               ", 5},
+            {"            ::::.     ..    :::    ..     .:::              ", 6},
+            {"           ::::.     ::::   :::   ::::     .:::             ", 6},
+            {"          ::::       ::::   :::   ::::       :::            ", 6},
+            {"         ::::.        ::     :     ::        .:::           ", 6},
+            {"        ::::.                               .:::            ", 5},
+            {"       ::::.           .............           .:::         ", 5},
+            {"      ::::.         .::::::::::::::::::.         .:::      ", 5},
+            {"     ::::.        .::::::::::::::::::::::::.        .:::   ", 5},
+            {"    ::::.       .:::::::................::::.       .:::  ", 5},
+            {"   ::::.       :::::.                    .::::       .:::  ", 5},
+            {"  ::::.       ::::.                        .:::       .:::.", 5},
+            {" ::::.       ::::.                          .:::       .:::", 5},
+            {"::::.        :::                              :::        .:::", 5},
+            {":::.         :::                              :::         .:::", 5},
+            {":::.         :::                              :::         .:::", 5},
+            {":::.         ::::.                          .:::         .:::", 5},
+            {"::::.        :::::.                        .::::        .:::", 5},
+            {" ::::.        :::::..                    ..:::::        .:::", 5},
+            {"  ::::.        :::::::................:::::::        .:::  ", 5},
+            {"   ::::.        .:::::::::::::::::::::::::::.        .:::  ", 5},
+            {"    ::::.         .::::::::::::::::::::::.         .:::    ", 5},
+            {"     ::::.           ...............           .:::         ", 5},
+            {"      ::::.                                   .:::          ", 5},
+            {"       ::::.                                 .:::           ", 5},
+            {"        ::::.                               .:::            ", 5},
+            {"         ::::.                             .:::             ", 5},
+            {"          ::::.                           .:::              ", 5},
+            {"           ::::.                         .:::               ", 5},
+            {"            ::::.                       .:::                ", 5},
+            {"             ::::.                     .:::                 ", 5},
+            {"              ::::.                   .:::                  ", 5},
+            {"               ::::..               ..:::                   ", 5},
+            {"                .::::::::.......::::::::                   ", 5},
+            {"                  .:::::::::::::::::.                      ", 5},
+            {"                     ............                          ", 5},
+            {"", 7},
+            {"            ♪ ♫ ♪  UwU Music Player  ♪ ♫ ♪                 ", 2},
+            {"                                                            ", 7},
+            {"               Press any key to continue...                 ", 3}
+        };
+        
+        int max_y, max_x;
+        getmaxyx(stdscr, max_y, max_x);
+        
+        // Center the art
+        int start_y = (max_y - anime_art.size()) / 2;
+        
+        for (size_t i = 0; i < anime_art.size(); i++) {
+            int start_x = (max_x - anime_art[i].first.length()) / 2;
+            attron(COLOR_PAIR(anime_art[i].second));
+            mvprintw(start_y + i, start_x, "%s", anime_art[i].first.c_str());
+            attroff(COLOR_PAIR(anime_art[i].second));
+        }
+        
+        refresh();
+        getch(); // Wait for user input
+    }
+    
     Mode promptModeSelection() {
         int highlight = 0;
         const char* choices[] = {
-            "Offline Library", 
-            "Online (YouTube)", 
-            "Playlist Mode"
+            "🎵 Offline Library", 
+            "🌐 Online (YouTube)", 
+            "📋 Playlist Mode"
         };
         const int num_choices = 3;
         
         while(true) {
             clear();
             
-            // Title
-            mvprintw(LINES / 2 - 3, (COLS - 20) / 2, "=== UWU MUSIC PLAYER ===");
-            mvprintw(LINES / 2 - 1, (COLS - 15) / 2, "Select a mode:");
+            int max_y, max_x;
+            getmaxyx(stdscr, max_y, max_x);
             
-            // Menu options
+            // Draw header with color
+            attron(COLOR_PAIR(30)); // Cyan on blue background
+            for (int i = 0; i < max_x; i++) {
+                mvprintw(0, i, " ");
+                mvprintw(1, i, " ");
+                mvprintw(2, i, " ");
+            }
+            centerText(stdscr, 1, "=== UWU MUSIC PLAYER ===");
+            attroff(COLOR_PAIR(30));
+            
+            // Draw title
+            attron(COLOR_PAIR(2)); // Yellow
+            mvprintw(LINES / 2 - 3, (COLS - 20) / 2, "Select a mode:");
+            attroff(COLOR_PAIR(2));
+            
+            // Draw menu options with colors
             for(int i = 0; i < num_choices; ++i) {
-                if (i == highlight) attron(A_REVERSE);
-                mvprintw(LINES / 2 + i + 1, (COLS - strlen(choices[i])) / 2, "%s", choices[i]);
-                if (i == highlight) attroff(A_REVERSE);
+                int y_pos = LINES / 2 + i;
+                int x_pos = (COLS - strlen(choices[i])) / 2;
+                
+                if (i == highlight) {
+                    attron(COLOR_PAIR(8)); // Inverted colors for selection
+                    mvprintw(y_pos, x_pos - 2, "> ");
+                    mvprintw(y_pos, x_pos, "%s", choices[i]);
+                    mvprintw(y_pos, x_pos + strlen(choices[i]), " <");
+                    attroff(COLOR_PAIR(8));
+                } else {
+                    // Different color for each option
+                    int color = (i == 0) ? 3 : (i == 1) ? 6 : 5; // Green, Blue, Magenta
+                    attron(COLOR_PAIR(color));
+                    mvprintw(y_pos, x_pos, "%s", choices[i]);
+                    attroff(COLOR_PAIR(color));
+                }
             }
             
-            // Instructions
-            mvprintw(LINES / 2 + num_choices + 3, (COLS - 35) / 2, "Use UP/DOWN arrows and ENTER to select");
+            // Draw instructions
+            attron(COLOR_PAIR(1)); // Cyan
+            mvprintw(LINES / 2 + num_choices + 2, (COLS - 35) / 2, "Use ↑/↓ arrows and ENTER to select");
+            mvprintw(LINES / 2 + num_choices + 3, (COLS - 25) / 2, "Or press 1, 2, or 3");
+            attroff(COLOR_PAIR(1));
+            
+            // Draw footer
+            attron(COLOR_PAIR(30));
+            for (int i = 0; i < max_x; i++) {
+                mvprintw(max_y - 3, i, " ");
+                mvprintw(max_y - 2, i, " ");
+                mvprintw(max_y - 1, i, " ");
+            }
+            centerText(stdscr, max_y - 2, "♪ ♫ ♪ Made with love ♪ ♫ ♪");
+            attroff(COLOR_PAIR(30));
             
             refresh();
 

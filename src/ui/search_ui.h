@@ -5,8 +5,12 @@
 #include <vector>
 #include "../streaming/youtube_stream.h"
 #include "../playlist/playlist_manager.h"
+#include <ncurses.h>  // Add this include
 
 namespace UI {
+    // Forward declaration for centerText from ui_common.cpp
+    void centerText(WINDOW* win, int y, const std::string& text);
+    
     // Search functionality
     std::string getSearchQuery(int max_y, int max_x);
     Streaming::SearchResult selectFromResults(const std::vector<Streaming::SearchResult>& results);

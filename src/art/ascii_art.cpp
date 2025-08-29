@@ -9,7 +9,6 @@
 #include <filesystem>
 #include <cstdlib>
 #include <fstream>
-#include <cmath>
 
 namespace AsciiArt {
     
@@ -17,25 +16,28 @@ namespace AsciiArt {
         std::vector<std::string> asciiArt(THUMBNAIL_HEIGHT, std::string(THUMBNAIL_WIDTH, ' '));
         
         if (!imageData || dataSize == 0) {
-            // Clean "no image" display
+            // Simple no image pattern with dots and colons only
             std::vector<std::string> noImagePattern = {
-                "╔══════════════════════════════════════════════════════════════════════════════════════╗",
-                "║                                                                                      ║",
-                "║                                    🎵 YOUTUBE 🎵                                     ║",
-                "║                                                                                      ║",
-                "║    ██████████████████████████████████████████████████████████████████████████      ║",
-                "║    █                                                                        █      ║",
-                "║    █                                                                        █      ║",
-                "║    █                          No Thumbnail Available                       █      ║",
-                "║    █                                                                        █      ║",
-                "║    █                             Loading...                                █      ║",
-                "║    █                                                                        █      ║",
-                "║    █                                                                        █      ║",
-                "║    ██████████████████████████████████████████████████████████████████████████      ║",
-                "║                                                                                      ║",
-                "║                                  ♪ ♫ ♪ ♫ ♪ ♫ ♪                                    ║",
-                "║                                                                                      ║",
-                "╚══════════════════════════════════════════════════════════════════════════════════════╝"
+                ":::::::::::::::::::::::::::::::::::::::::::::::::::::::::",
+                ":                                                       :",
+                ":                NO THUMBNAIL FOUND                     :",
+                ":                                                       :",
+                ":   ................................................    :",
+                ":   .                                          .    :",
+                ":   .          : . : . : . : . : . :           .    :",
+                ":   .                                          .    :",
+                ":   .             YOUTUBE MUSIC                .    :",
+                ":   .                                          .    :",
+                ":   .          : . : . : . : . : . :           .    :",
+                ":   .                                          .    :",
+                ":   ................................................    :",
+                ":                                                       :",
+                ":                Loading thumbnail...                   :",
+                ":                                                       :",
+                ":::::::::::::::::::::::::::::::::::::::::::::::::::::::::",
+                "                                                        ",
+                "                                                        ",
+                "                                                        "
             };
             
             // Ensure proper sizing
@@ -54,12 +56,11 @@ namespace AsciiArt {
             return asciiArt;
         }
         
-        // Simple brightness-based ASCII conversion
-        const std::string chars = " .:-=+*#%@";
+        // Simple ASCII conversion with dots and colons for different brightness levels
+        const std::string chars = " ..:::::";  // More levels for better detail
         
         for (int y = 0; y < THUMBNAIL_HEIGHT; y++) {
             for (int x = 0; x < THUMBNAIL_WIDTH; x++) {
-                // Sample the image data
                 size_t index = (y * THUMBNAIL_WIDTH + x) * 3;
                 
                 if (index + 2 < dataSize) {
@@ -70,7 +71,7 @@ namespace AsciiArt {
                     // Convert to grayscale
                     int brightness = (r * 299 + g * 587 + b * 114) / 1000;
                     
-                    // Map to ASCII character
+                    // Map to simple character set
                     int charIndex = (brightness * (chars.length() - 1)) / 255;
                     charIndex = std::max(0, std::min((int)chars.length() - 1, charIndex));
                     
@@ -79,6 +80,16 @@ namespace AsciiArt {
                     asciiArt[y][x] = ' ';
                 }
             }
+        }
+        
+        // Add simple border with colons
+        for (int x = 0; x < THUMBNAIL_WIDTH; x++) {
+            asciiArt[0][x] = ':';
+            asciiArt[THUMBNAIL_HEIGHT-1][x] = ':';
+        }
+        for (int y = 0; y < THUMBNAIL_HEIGHT; y++) {
+            asciiArt[y][0] = ':';
+            asciiArt[y][THUMBNAIL_WIDTH-1] = ':';
         }
         
         return asciiArt;
@@ -169,7 +180,7 @@ namespace AsciiArt {
         file.read(image_data.data(), file_size);
         file.close();
         
-        // Generate simple ASCII art
+        // Generate ASCII art
         std::vector<std::string> ascii_art = generateASCIIArt(image_data.data(), file_size);
         
         // Clean up temp files

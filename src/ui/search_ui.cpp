@@ -64,13 +64,12 @@ namespace UI {
     }
     
     void drawProgressBar(int y, int x, int width, int current_seconds, int total_seconds) {
-        // If total is unknown, try to estimate or use a reasonable default
         if (total_seconds <= 0) {
             total_seconds = 180; // Default 3 minutes
         }
         
         float progress = (float)current_seconds / total_seconds;
-        if (progress > 1.0f) progress = 1.0f; // Cap at 100%
+        if (progress > 1.0f) progress = 1.0f;
         
         int filled = (int)(progress * (width - 2));
         
@@ -78,10 +77,10 @@ namespace UI {
         for (int i = 0; i < width - 2; i++) {
             if (i < filled) {
                 attron(A_REVERSE);
-                mvprintw(y, x + 1 + i, " ");  // Use reverse space for solid blocks
+                mvprintw(y, x + 1 + i, " ");
                 attroff(A_REVERSE);
             } else {
-                mvprintw(y, x + 1 + i, " ");  // Empty space
+                mvprintw(y, x + 1 + i, " ");
             }
         }
         mvprintw(y, x + width - 1, "]");
@@ -156,10 +155,10 @@ namespace UI {
         Audio::is_paused = false;
         std::thread play_thread([fifo_path]() { Audio::PlayAudio(fifo_path); });
 
-        // Get ASCII art once
+        // Get simple ASCII art once
         std::vector<std::string> asciiArt = AsciiArt::getYouTubeThumbnailASCII(video.id);
         
-        // Track playback time manually since Audio::GetCurrentTimeSeconds() might not work
+        // Track playback time manually
         auto start_time = std::chrono::steady_clock::now();
         int paused_time = 0;
         auto pause_start = std::chrono::steady_clock::now();
@@ -204,7 +203,7 @@ namespace UI {
                     mvprintw(y, art_panel_width, "|");
                 }
                 
-                // Left panel - ASCII art takes full space
+                // Left panel - ASCII art
                 int art_y = 0;
                 for (size_t i = 0; i < asciiArt.size() && art_y < max_y - 4; i++) {
                     std::string line = asciiArt[i];
@@ -222,7 +221,7 @@ namespace UI {
                 int info_width = info_panel_width - 3;
                 
                 mvprintw(1, info_x, "NOW PLAYING");
-                mvprintw(2, info_x, "━━━━━━━━━━━");
+                mvprintw(2, info_x, "-----------");
                 
                 // Wrap title if needed
                 std::string title = video.title;
@@ -235,12 +234,12 @@ namespace UI {
                 
                 // Controls
                 mvprintw(max_y - 8, info_x, "CONTROLS");
-                mvprintw(max_y - 7, info_x, "━━━━━━━━");
+                mvprintw(max_y - 7, info_x, "--------");
                 mvprintw(max_y - 5, info_x, "[SPACE] %s", Audio::is_paused ? "Resume" : "Pause");
                 mvprintw(max_y - 4, info_x, "[Q] Stop");
                 
                 // Status
-                mvprintw(max_y - 2, info_x, Audio::is_paused ? "⏸ PAUSED" : "▶ PLAYING");
+                mvprintw(max_y - 2, info_x, Audio::is_paused ? "PAUSED" : "PLAYING");
                 
                 refresh();
                 if (!Audio::is_paused) {
@@ -288,9 +287,6 @@ namespace UI {
     void runPlaylistMode() {
         while (true) {
             clear();
-            int max_y, max_x;
-            getmaxyx(stdscr, max_y, max_x);
-            
             mvprintw(0, 0, "=== PLAYLIST MODE ===");
             mvprintw(2, 2, "1. Import YouTube/YouTube Music Playlist");
             mvprintw(3, 2, "2. View Saved Playlists");
@@ -316,7 +312,6 @@ namespace UI {
                 Playlist::PlaylistInfo playlist = Playlist::extractYouTubePlaylist(url);
                 
                 if (!playlist.songs.empty()) {
-                    // Generate filename with timestamp
                     std::string safe_name = playlist.name;
                     std::replace(safe_name.begin(), safe_name.end(), ' ', '_');
                     std::replace(safe_name.begin(), safe_name.end(), '/', '-');
@@ -365,7 +360,6 @@ namespace UI {
             for (size_t i = 0; i < playlists.size(); i++) {
                 if (i == highlight) attron(A_REVERSE);
                 
-                // Remove .playlist extension for display
                 std::string display_name = playlists[i];
                 if (display_name.length() >= 9 && display_name.substr(display_name.length() - 9) == ".playlist") {
                     display_name = display_name.substr(0, display_name.length() - 9);
@@ -422,25 +416,21 @@ namespace UI {
             mvprintw(0, 0, "Playlist: %s (%zu songs)", playlist.name.c_str(), playlist.songs.size());
             mvprintw(1, 0, "Enter: Play | Space: Play All | q: Back");
             
-            // Calculate display area
             int header_lines = 3;
             int display_lines = max_y - header_lines - 1;
             
-            // Adjust scroll offset
             if (highlight < scroll_offset) {
                 scroll_offset = highlight;
             } else if (highlight >= scroll_offset + display_lines) {
                 scroll_offset = highlight - display_lines + 1;
             }
             
-            // Display songs
             for (int i = 0; i < display_lines && scroll_offset + i < playlist.songs.size(); i++) {
                 int song_idx = scroll_offset + i;
                 const auto& song = playlist.songs[song_idx];
                 
                 if (song_idx == highlight) attron(A_REVERSE);
                 
-                // Format: "  1. Title - Artist [duration]"
                 std::string display = std::to_string(song_idx + 1) + ". ";
                 display += song.title.substr(0, 40);
                 if (song.title.length() > 40) display += "...";
@@ -452,7 +442,6 @@ namespace UI {
                 if (song_idx == highlight) attroff(A_REVERSE);
             }
             
-            // Show scroll indicator
             if (playlist.songs.size() > display_lines) {
                 mvprintw(max_y - 1, 0, "Song %d/%zu (↑↓ to scroll)", highlight + 1, playlist.songs.size());
             }
@@ -490,7 +479,6 @@ namespace UI {
         for (size_t i = start_index; i < playlist.songs.size(); i++) {
             const auto& song = playlist.songs[i];
             
-            // Show what's playing
             clear();
             mvprintw(0, 0, "Playing playlist: %s", playlist.name.c_str());
             mvprintw(1, 0, "Track %zu/%zu", i + 1, playlist.songs.size());
@@ -498,15 +486,12 @@ namespace UI {
             mvprintw(5, 0, "Press 'n' for next, 'p' for previous, 'q' to stop playlist");
             refresh();
             
-            // Prepare the video info
             Streaming::SearchResult result;
             result.id = song.id;
             result.title = song.title + " - " + song.artist;
             
-            // Use the updated playYouTubeVideo function
             playYouTubeVideo(result);
             
-            // Check if user wants to navigate
             clear();
             mvprintw(0, 0, "Song finished. What next?");
             mvprintw(1, 0, "'n' = Next, 'p' = Previous, 'q' = Quit, any other key = Continue");
@@ -516,21 +501,13 @@ namespace UI {
             nodelay(stdscr, FALSE);
             
             switch(ch) {
-                case 'n': // Next (continue normally)
-                    break;
-                case 'p': // Previous
-                    if (i > 0) {
-                        i -= 2; // Will be incremented by loop, so go back 2
-                    }
-                    break;
-                case 'q': // Quit playlist
-                    return;
-                default: // Continue
-                    break;
+                case 'n': break;
+                case 'p': if (i > 0) { i -= 2; } break;
+                case 'q': return;
+                default: break;
             }
         }
         
-        // Playlist finished
         clear();
         mvprintw(0, 0, "Playlist finished!");
         mvprintw(2, 0, "Press any key to continue...");
