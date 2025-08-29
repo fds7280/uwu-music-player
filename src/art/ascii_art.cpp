@@ -12,11 +12,12 @@
 
 namespace AsciiArt {
     
-    std::vector<std::string> generateASCIIArt(const char* imageData, size_t dataSize) {
-        std::vector<std::string> asciiArt(THUMBNAIL_HEIGHT, std::string(THUMBNAIL_WIDTH, ' '));
+    std::vector<std::vector<ColoredChar>> generateColoredASCII(const char* imageData, size_t dataSize) {
+        std::vector<std::vector<ColoredChar>> coloredArt(THUMBNAIL_HEIGHT, 
+            std::vector<ColoredChar>(THUMBNAIL_WIDTH, {' ', 7}));
         
         if (!imageData || dataSize == 0) {
-            // Simple no image pattern with dots and colons only
+            // No image pattern with colors
             std::vector<std::string> noImagePattern = {
                 ":::::::::::::::::::::::::::::::::::::::::::::::::::::::::",
                 ":                                                       :",
@@ -34,30 +35,30 @@ namespace AsciiArt {
                 ":                                                       :",
                 ":                Loading thumbnail...                   :",
                 ":                                                       :",
-                ":::::::::::::::::::::::::::::::::::::::::::::::::::::::::",
-                "                                                        ",
-                "                                                        ",
-                "                                                        "
+                ":::::::::::::::::::::::::::::::::::::::::::::::::::::::::"
             };
             
-            // Ensure proper sizing
-            for (int i = 0; i < THUMBNAIL_HEIGHT; i++) {
-                if (i < noImagePattern.size()) {
-                    std::string line = noImagePattern[i];
-                    if (line.length() > THUMBNAIL_WIDTH) {
-                        asciiArt[i] = line.substr(0, THUMBNAIL_WIDTH);
-                    } else {
-                        asciiArt[i] = line + std::string(THUMBNAIL_WIDTH - line.length(), ' ');
+            for (int y = 0; y < THUMBNAIL_HEIGHT && y < noImagePattern.size(); y++) {
+                std::string line = noImagePattern[y];
+                for (int x = 0; x < THUMBNAIL_WIDTH && x < line.length(); x++) {
+                    char ch = line[x];
+                    int color = 7; // Default white
+                    
+                    if (ch == ':') {
+                        color = 1; // Cyan for border
+                    } else if (ch == '.') {
+                        color = 6; // Blue for dots
                     }
-                } else {
-                    asciiArt[i] = std::string(THUMBNAIL_WIDTH, ' ');
+                    
+                    coloredArt[y][x] = {ch, color};
                 }
             }
-            return asciiArt;
+            
+            return coloredArt;
         }
         
-        // Simple ASCII conversion with dots and colons for different brightness levels
-        const std::string chars = " ..:::::";  // More levels for better detail
+        // Process image with colors based on brightness
+        const std::string chars = " ..:::::";
         
         for (int y = 0; y < THUMBNAIL_HEIGHT; y++) {
             for (int x = 0; x < THUMBNAIL_WIDTH; x++) {
@@ -71,28 +72,64 @@ namespace AsciiArt {
                     // Convert to grayscale
                     int brightness = (r * 299 + g * 587 + b * 114) / 1000;
                     
-                    // Map to simple character set
+                    // Select character based on brightness
                     int charIndex = (brightness * (chars.length() - 1)) / 255;
                     charIndex = std::max(0, std::min((int)chars.length() - 1, charIndex));
                     
-                    asciiArt[y][x] = chars[charIndex];
+                    // Select color based on RGB values
+                    int color_pair = 7; // Default white
+                    
+                    // Determine dominant color
+                    if (brightness < 30) {
+                        color_pair = 0; // Black
+                    } else if (r > g && r > b && r > 100) {
+                        // Red dominant
+                        if (brightness > 180) color_pair = 3; // Yellow
+                        else color_pair = 1; // Red
+                    } else if (g > r && g > b && g > 100) {
+                        // Green dominant
+                        color_pair = 2; // Green
+                    } else if (b > r && b > g && b > 100) {
+                        // Blue dominant
+                        if (brightness > 180) color_pair = 6; // Cyan
+                        else color_pair = 4; // Blue
+                    } else {
+                        // Grayscale
+                        if (brightness < 85) color_pair = 8; // Dark gray
+                        else if (brightness < 170) color_pair = 7; // Light gray
+                        else color_pair = 15; // White
+                    }
+                    
+                    coloredArt[y][x] = {chars[charIndex], color_pair};
                 } else {
-                    asciiArt[y][x] = ' ';
+                    coloredArt[y][x] = {' ', 7};
                 }
             }
         }
         
-        // Add simple border with colons
+        // Add colored border
         for (int x = 0; x < THUMBNAIL_WIDTH; x++) {
-            asciiArt[0][x] = ':';
-            asciiArt[THUMBNAIL_HEIGHT-1][x] = ':';
+            coloredArt[0][x] = {':', 6}; // Cyan border
+            coloredArt[THUMBNAIL_HEIGHT-1][x] = {':', 6};
         }
         for (int y = 0; y < THUMBNAIL_HEIGHT; y++) {
-            asciiArt[y][0] = ':';
-            asciiArt[y][THUMBNAIL_WIDTH-1] = ':';
+            coloredArt[y][0] = {':', 6};
+            coloredArt[y][THUMBNAIL_WIDTH-1] = {':', 6};
         }
         
-        return asciiArt;
+        return coloredArt;
+    }
+    
+    std::vector<std::string> generateASCIIArt(const char* imageData, size_t dataSize) {
+        auto colored = generateColoredASCII(imageData, dataSize);
+        std::vector<std::string> result(THUMBNAIL_HEIGHT, std::string(THUMBNAIL_WIDTH, ' '));
+        
+        for (int y = 0; y < THUMBNAIL_HEIGHT; y++) {
+            for (int x = 0; x < THUMBNAIL_WIDTH; x++) {
+                result[y][x] = colored[y][x].character;
+            }
+        }
+        return result;
     }
     
     std::vector<std::string> extractAlbumArtASCII(const std::string& filePath) {
@@ -123,7 +160,7 @@ namespace AsciiArt {
         return generateASCIIArt(imageData.data(), imageData.size());
     }
     
-    std::vector<std::string> getYouTubeThumbnailASCII(const std::string& video_id) {
+    std::vector<std::vector<ColoredChar>> getYouTubeColoredThumbnail(const std::string& video_id) {
         std::string temp_dir = "/tmp/uwu_thumbnails/";
         std::string temp_jpg = temp_dir + video_id + ".jpg";
         std::string temp_raw = temp_dir + video_id + ".rgb";
@@ -150,7 +187,7 @@ namespace AsciiArt {
         }
         
         if (!downloaded) {
-            return generateASCIIArt(nullptr, 0);
+            return generateColoredASCII(nullptr, 0);
         }
         
         // Convert JPEG to raw RGB data using ImageMagick
@@ -161,7 +198,7 @@ namespace AsciiArt {
         
         if (system(convert_cmd.c_str()) != 0) {
             std::filesystem::remove(temp_jpg);
-            return generateASCIIArt(nullptr, 0);
+            return generateColoredASCII(nullptr, 0);
         }
         
         // Read the raw RGB data
@@ -169,7 +206,7 @@ namespace AsciiArt {
         if (!file) {
             std::filesystem::remove(temp_jpg);
             std::filesystem::remove(temp_raw);
-            return generateASCIIArt(nullptr, 0);
+            return generateColoredASCII(nullptr, 0);
         }
         
         file.seekg(0, std::ios::end);
@@ -180,13 +217,25 @@ namespace AsciiArt {
         file.read(image_data.data(), file_size);
         file.close();
         
-        // Generate ASCII art
-        std::vector<std::string> ascii_art = generateASCIIArt(image_data.data(), file_size);
+        // Generate colored ASCII art
+        auto colored_art = generateColoredASCII(image_data.data(), file_size);
         
         // Clean up temp files
         std::filesystem::remove(temp_jpg);
         std::filesystem::remove(temp_raw);
         
-        return ascii_art;
+        return colored_art;
+    }
+    
+    std::vector<std::string> getYouTubeThumbnailASCII(const std::string& video_id) {
+        auto colored = getYouTubeColoredThumbnail(video_id);
+        std::vector<std::string> result(THUMBNAIL_HEIGHT, std::string(THUMBNAIL_WIDTH, ' '));
+        
+        for (int y = 0; y < THUMBNAIL_HEIGHT; y++) {
+            for (int x = 0; x < THUMBNAIL_WIDTH; x++) {
+                result[y][x] = colored[y][x].character;
+            }
+        }
+        return result;
     }
 }

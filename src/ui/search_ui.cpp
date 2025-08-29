@@ -156,7 +156,7 @@ namespace UI {
         std::thread play_thread([fifo_path]() { Audio::PlayAudio(fifo_path); });
 
         // Get simple ASCII art once
-        std::vector<std::string> asciiArt = AsciiArt::getYouTubeThumbnailASCII(video.id);
+        auto coloredArt = AsciiArt::getYouTubeColoredThumbnail(video.id);
         
         // Track playback time manually
         auto start_time = std::chrono::steady_clock::now();
@@ -204,14 +204,16 @@ namespace UI {
                 }
                 
                 // Left panel - ASCII art
-                int art_y = 0;
-                for (size_t i = 0; i < asciiArt.size() && art_y < max_y - 4; i++) {
-                    std::string line = asciiArt[i];
-                    if (line.length() > art_panel_width - 1) {
-                        line = line.substr(0, art_panel_width - 1);
-                    }
-                    mvprintw(art_y++, 0, "%s", line.c_str());
-                }
+                // Left panel - Colored ASCII art
+int art_y = 0;
+for (size_t i = 0; i < coloredArt.size() && art_y < max_y - 4; i++) {
+    for (size_t j = 0; j < coloredArt[i].size() && j < art_panel_width - 1; j++) {
+        attron(COLOR_PAIR(coloredArt[i][j].color_pair));
+        mvprintw(art_y, j, "%c", coloredArt[i][j].character);
+        attroff(COLOR_PAIR(coloredArt[i][j].color_pair));
+    }
+    art_y++;
+}
                 
                 // Progress bar below the art
                 drawProgressBar(max_y - 3, 2, art_panel_width - 4, current_time, total_duration);
