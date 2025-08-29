@@ -3,54 +3,73 @@
 #include <vector>
 
 namespace UI {
-    void init() {
-        initscr();
-        start_color();  // Enable color support
-        
-        // Check if terminal supports colors
-        if (!has_colors()) {
-            endwin();
-            printf("Your terminal does not support colors\n");
-            exit(1);
-        }
-        
-        // Initialize color pairs for UI elements
-        init_pair(1, COLOR_CYAN, COLOR_BLACK);     // Cyan text
-        init_pair(2, COLOR_YELLOW, COLOR_BLACK);   // Yellow text  
-        init_pair(3, COLOR_GREEN, COLOR_BLACK);    // Green text
-        init_pair(4, COLOR_RED, COLOR_BLACK);      // Red text
-        init_pair(5, COLOR_MAGENTA, COLOR_BLACK);  // Magenta text
-        init_pair(6, COLOR_BLUE, COLOR_BLACK);     // Blue text
-        init_pair(7, COLOR_WHITE, COLOR_BLACK);    // White text
-        init_pair(8, COLOR_BLACK, COLOR_WHITE);    // Inverted for selection
-        
-        // Progress bar colors
-        init_pair(10, COLOR_WHITE, COLOR_GREEN);   // Progress filled
-        init_pair(11, COLOR_WHITE, COLOR_RED);     // Progress empty
-        init_pair(12, COLOR_BLACK, COLOR_YELLOW);  // Progress text
-        
-        // Thumbnail colors (for different brightness levels)
-        init_pair(20, COLOR_BLACK, COLOR_BLACK);   // Very dark
-        init_pair(21, COLOR_BLUE, COLOR_BLACK);    // Dark
-        init_pair(22, COLOR_CYAN, COLOR_BLACK);    // Medium-dark
-        init_pair(23, COLOR_GREEN, COLOR_BLACK);   // Medium
-        init_pair(24, COLOR_YELLOW, COLOR_BLACK);  // Medium-bright
-        init_pair(25, COLOR_RED, COLOR_BLACK);     // Bright
-        init_pair(26, COLOR_MAGENTA, COLOR_BLACK); // Very bright
-        init_pair(27, COLOR_WHITE, COLOR_BLACK);   // Brightest
-        
-        // Special UI colors
-        init_pair(30, COLOR_CYAN, COLOR_BLUE);     // Header background
-        init_pair(31, COLOR_YELLOW, COLOR_RED);    // Warning/Alert
-        init_pair(32, COLOR_GREEN, COLOR_GREEN);   // Success background
-        
-        noecho();
-        cbreak();
-        keypad(stdscr, TRUE);
-        curs_set(0);
+ void init() {
+    initscr();
+    start_color();
+    
+    // Check if terminal supports colors
+    if (!has_colors()) {
+        endwin();
+        printf("Your terminal does not support colors\n");
+        exit(1);
     }
     
-    void cleanup() {
+    // Basic 16 colors for ASCII art (matching terminal palette)
+    init_pair(0, COLOR_BLACK, COLOR_BLACK);     // Black
+    init_pair(1, COLOR_RED, COLOR_BLACK);       // Red
+    init_pair(2, COLOR_GREEN, COLOR_BLACK);     // Green
+    init_pair(3, COLOR_YELLOW, COLOR_BLACK);    // Yellow
+    init_pair(4, COLOR_BLUE, COLOR_BLACK);      // Blue
+    init_pair(5, COLOR_MAGENTA, COLOR_BLACK);   // Magenta
+    init_pair(6, COLOR_CYAN, COLOR_BLACK);      // Cyan
+    init_pair(7, COLOR_WHITE, COLOR_BLACK);     // White
+    
+    // Bright versions (8-15)
+    init_pair(8, COLOR_BLACK, COLOR_BLACK);     // Dark gray (using black)
+    init_pair(9, COLOR_RED, COLOR_BLACK);       // Bright red
+    init_pair(10, COLOR_GREEN, COLOR_BLACK);    // Bright green
+    init_pair(11, COLOR_YELLOW, COLOR_BLACK);   // Bright yellow
+    init_pair(12, COLOR_BLUE, COLOR_BLACK);     // Bright blue
+    init_pair(13, COLOR_MAGENTA, COLOR_BLACK);  // Bright magenta
+    init_pair(14, COLOR_CYAN, COLOR_BLACK);     // Bright cyan
+    init_pair(15, COLOR_WHITE, COLOR_BLACK);    // Bright white
+    
+    // UI element colors (20-29)
+    init_pair(20, COLOR_YELLOW, COLOR_BLACK);   // Headers
+    init_pair(21, COLOR_CYAN, COLOR_BLACK);     // Borders
+    init_pair(22, COLOR_GREEN, COLOR_BLACK);    // Success/Playing
+    init_pair(23, COLOR_RED, COLOR_BLACK);      // Error/Stopped
+    init_pair(24, COLOR_MAGENTA, COLOR_BLACK);  // Highlights
+    init_pair(25, COLOR_BLUE, COLOR_BLACK);     // Info text
+    init_pair(26, COLOR_WHITE, COLOR_RED);      // Warnings
+    init_pair(27, COLOR_BLACK, COLOR_WHITE);    // Inverted
+    init_pair(28, COLOR_WHITE, COLOR_BLUE);     // Selection
+    init_pair(29, COLOR_YELLOW, COLOR_BLUE);    // Active selection
+    
+    // Progress bar colors (30-31)
+    init_pair(30, COLOR_WHITE, COLOR_GREEN);    // Progress filled
+    init_pair(31, COLOR_WHITE, COLOR_BLACK);    // Progress empty
+    
+    // Special backgrounds (32-35)
+    init_pair(32, COLOR_BLACK, COLOR_GREEN);    // Success background
+    init_pair(33, COLOR_WHITE, COLOR_RED);      // Error background
+    init_pair(34, COLOR_BLACK, COLOR_YELLOW);   // Warning background
+    init_pair(35, COLOR_WHITE, COLOR_BLUE);     // Info background
+    
+    // Set up ncurses options
+    noecho();        // Don't echo input characters
+    cbreak();        // Disable line buffering
+    keypad(stdscr, TRUE);  // Enable special keys
+    curs_set(0);     // Hide cursor
+    
+    // Enable mouse support if available
+    mousemask(ALL_MOUSE_EVENTS, NULL);
+    
+    // Set timeout for getch() in milliseconds (optional)
+    // timeout(100);  // Uncomment if you want non-blocking input
+ }
+
+  void cleanup() {
         endwin();
     }
     

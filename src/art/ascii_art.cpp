@@ -9,56 +9,85 @@
 #include <filesystem>
 #include <cstdlib>
 #include <fstream>
+#include <cmath>
 
 namespace AsciiArt {
     
+    // Better color mapping to terminal colors
+    int rgbToTerminalColor(int r, int g, int b) {
+        // Terminal color palette (basic 16 colors)
+        // 0=black, 1=red, 2=green, 3=yellow, 4=blue, 5=magenta, 6=cyan, 7=white
+        // 8-15 are bright versions
+        
+        // Normalize RGB values
+        float rf = r / 255.0f;
+        float gf = g / 255.0f;
+        float bf = b / 255.0f;
+        
+        // Calculate brightness
+        float brightness = (rf + gf + bf) / 3.0f;
+        
+        // Very dark pixels
+        if (brightness < 0.1) return 0; // Black
+        
+        // Determine dominant color channel
+        float max_val = std::max({rf, gf, bf});
+        float min_val = std::min({rf, gf, bf});
+        float saturation = (max_val - min_val);
+        
+        // Grayscale (low saturation)
+        if (saturation < 0.15) {
+            if (brightness < 0.3) return 8;  // Dark gray
+            if (brightness < 0.6) return 7;  // Light gray
+            return 15; // White
+        }
+        
+        // Colored pixels - find closest terminal color
+        if (rf > gf && rf > bf) {
+            // Red dominant
+            if (gf > bf * 1.5) return (brightness > 0.5) ? 11 : 3; // Yellow
+            return (brightness > 0.5) ? 9 : 1; // Red
+        } else if (gf > rf && gf > bf) {
+            // Green dominant
+            if (bf > rf * 1.5) return (brightness > 0.5) ? 14 : 6; // Cyan
+            return (brightness > 0.5) ? 10 : 2; // Green
+        } else if (bf > rf && bf > gf) {
+            // Blue dominant
+            if (rf > gf * 1.5) return (brightness > 0.5) ? 13 : 5; // Magenta
+            if (gf > rf * 1.5) return (brightness > 0.5) ? 14 : 6; // Cyan
+            return (brightness > 0.5) ? 12 : 4; // Blue
+        }
+        
+        return 7; // Default white
+    }
+    
     std::vector<std::vector<ColoredChar>> generateColoredASCII(const char* imageData, size_t dataSize) {
         std::vector<std::vector<ColoredChar>> coloredArt(THUMBNAIL_HEIGHT, 
-            std::vector<ColoredChar>(THUMBNAIL_WIDTH, {' ', 7}));
+            std::vector<ColoredChar>(THUMBNAIL_WIDTH, {'.', 7}));
         
         if (!imageData || dataSize == 0) {
-            // No image pattern with colors
-            std::vector<std::string> noImagePattern = {
-                ":::::::::::::::::::::::::::::::::::::::::::::::::::::::::",
-                ":                                                       :",
-                ":                NO THUMBNAIL FOUND                     :",
-                ":                                                       :",
-                ":   ................................................    :",
-                ":   .                                          .    :",
-                ":   .          : . : . : . : . : . :           .    :",
-                ":   .                                          .    :",
-                ":   .             YOUTUBE MUSIC                .    :",
-                ":   .                                          .    :",
-                ":   .          : . : . : . : . : . :           .    :",
-                ":   .                                          .    :",
-                ":   ................................................    :",
-                ":                                                       :",
-                ":                Loading thumbnail...                   :",
-                ":                                                       :",
-                ":::::::::::::::::::::::::::::::::::::::::::::::::::::::::"
-            };
-            
-            for (int y = 0; y < THUMBNAIL_HEIGHT && y < noImagePattern.size(); y++) {
-                std::string line = noImagePattern[y];
-                for (int x = 0; x < THUMBNAIL_WIDTH && x < line.length(); x++) {
-                    char ch = line[x];
-                    int color = 7; // Default white
-                    
-                    if (ch == ':') {
-                        color = 1; // Cyan for border
-                    } else if (ch == '.') {
-                        color = 6; // Blue for dots
+            // No image pattern
+            for (int y = 0; y < THUMBNAIL_HEIGHT; y++) {
+                for (int x = 0; x < THUMBNAIL_WIDTH; x++) {
+                    if (y == 0 || y == THUMBNAIL_HEIGHT-1 || x == 0 || x == THUMBNAIL_WIDTH-1) {
+                        coloredArt[y][x] = {':', 6}; // Cyan border
+                    } else if (y == THUMBNAIL_HEIGHT/2 && x > 20 && x < THUMBNAIL_WIDTH-20) {
+                        const char* text = "NO THUMBNAIL";
+                        int text_start = (THUMBNAIL_WIDTH - 12) / 2;
+                        if (x >= text_start && x < text_start + 12) {
+                            coloredArt[y][x] = {text[x - text_start], 3}; // Yellow text
+                        }
+                    } else {
+                        coloredArt[y][x] = {'.', 8}; // Gray dots
                     }
-                    
-                    coloredArt[y][x] = {ch, color};
                 }
             }
-            
             return coloredArt;
         }
         
-        // Process image with colors based on brightness
-        const std::string chars = " ..:::::";
+        // Use dots and colons but packed tightly for pixel effect
+        // More dots = darker, colons = brighter
+        const char* pixels = ".:";
         
         for (int y = 0; y < THUMBNAIL_HEIGHT; y++) {
             for (int x = 0; x < THUMBNAIL_WIDTH; x++) {
@@ -69,52 +98,20 @@ namespace AsciiArt {
                     unsigned char g = static_cast<unsigned char>(imageData[index + 1]);
                     unsigned char b = static_cast<unsigned char>(imageData[index + 2]);
                     
-                    // Convert to grayscale
+                    // Calculate brightness for character selection
                     int brightness = (r * 299 + g * 587 + b * 114) / 1000;
                     
-                    // Select character based on brightness
-                    int charIndex = (brightness * (chars.length() - 1)) / 255;
-                    charIndex = std::max(0, std::min((int)chars.length() - 1, charIndex));
+                    // Use dot for dark pixels, colon for bright pixels
+                    char ch = (brightness < 128) ? '.' : ':';
                     
-                    // Select color based on RGB values
-                    int color_pair = 7; // Default white
+                    // Get appropriate color based on actual RGB values
+                    int color = rgbToTerminalColor(r, g, b);
                     
-                    // Determine dominant color
-                    if (brightness < 30) {
-                        color_pair = 0; // Black
-                    } else if (r > g && r > b && r > 100) {
-                        // Red dominant
-                        if (brightness > 180) color_pair = 3; // Yellow
-                        else color_pair = 1; // Red
-                    } else if (g > r && g > b && g > 100) {
-                        // Green dominant
-                        color_pair = 2; // Green
-                    } else if (b > r && b > g && b > 100) {
-                        // Blue dominant
-                        if (brightness > 180) color_pair = 6; // Cyan
-                        else color_pair = 4; // Blue
-                    } else {
-                        // Grayscale
-                        if (brightness < 85) color_pair = 8; // Dark gray
-                        else if (brightness < 170) color_pair = 7; // Light gray
-                        else color_pair = 15; // White
-                    }
-                    
-                    coloredArt[y][x] = {chars[charIndex], color_pair};
+                    coloredArt[y][x] = {ch, color};
                 } else {
                     coloredArt[y][x] = {' ', 7};
                 }
             }
-        }
-        
-        // Add colored border
-        for (int x = 0; x < THUMBNAIL_WIDTH; x++) {
-            coloredArt[0][x] = {':', 6}; // Cyan border
-            coloredArt[THUMBNAIL_HEIGHT-1][x] = {':', 6};
-        }
-        for (int y = 0; y < THUMBNAIL_HEIGHT; y++) {
-            coloredArt[y][0] = {':', 6};
-            coloredArt[y][THUMBNAIL_WIDTH-1] = {':', 6};
         }
         
         return coloredArt;
@@ -171,6 +168,7 @@ namespace AsciiArt {
         // Try different thumbnail qualities
         std::vector<std::string> thumbnail_urls = {
             "https://img.youtube.com/vi/" + video_id + "/maxresdefault.jpg",
+            "https://img.youtube.com/vi/" + video_id + "/sddefault.jpg",
             "https://img.youtube.com/vi/" + video_id + "/hqdefault.jpg",
             "https://img.youtube.com/vi/" + video_id + "/mqdefault.jpg"
         };
@@ -190,11 +188,12 @@ namespace AsciiArt {
             return generateColoredASCII(nullptr, 0);
         }
         
-        // Convert JPEG to raw RGB data using ImageMagick
-        std::string convert_cmd = "magick convert \"" + temp_jpg + "\" -resize " + 
+        // Convert JPEG to raw RGB data using ImageMagick with better quality
+        std::string convert_cmd = "magick convert \"" + temp_jpg + 
+                                  "\" -colorspace sRGB -resize " + 
                                   std::to_string(THUMBNAIL_WIDTH) + "x" + 
-                                  std::to_string(THUMBNAIL_HEIGHT) + "! " +
-                                  "-depth 8 rgb:\"" + temp_raw + "\" 2>/dev/null";
+                                  std::to_string(THUMBNAIL_HEIGHT) + 
+                                  "! -depth 8 rgb:\"" + temp_raw + "\" 2>/dev/null";
         
         if (system(convert_cmd.c_str()) != 0) {
             std::filesystem::remove(temp_jpg);

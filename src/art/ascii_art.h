@@ -5,8 +5,9 @@
 #include <vector>
 
 namespace AsciiArt {
-    const int THUMBNAIL_WIDTH = 60;
-    const int THUMBNAIL_HEIGHT = 20;
+    // Much higher resolution for pixel-like appearance
+    const int THUMBNAIL_WIDTH = 120;   // Double width
+    const int THUMBNAIL_HEIGHT = 40;   // Double height
     
     struct ColoredChar {
         char character;
