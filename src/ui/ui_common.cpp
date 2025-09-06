@@ -104,7 +104,7 @@ namespace UI {
     void showStartupScreen() {
         clear();
         
-        // Anime girl ASCII art using only . and : with colors
+        // Anime girl ASCII art
         std::vector<std::pair<std::string, int>> anime_art = {
             {"                    ........::::........                    ", 5},
             {"                 ..:::::::::::::::::::::..                 ", 5},
@@ -232,7 +232,7 @@ namespace UI {
                 mvprintw(max_y - 2, i, " ");
                 mvprintw(max_y - 1, i, " ");
             }
-            centerText(stdscr, max_y - 2, "♪ ♫ ♪ Made with love ♪ ♫ ♪");
+            centerText(stdscr, max_y - 2, "♪ ♫ ♪  ♪ ♫ ♪");
             attroff(COLOR_PAIR(30));
             
             refresh();
